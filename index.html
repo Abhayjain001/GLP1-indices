@@ -6,6 +6,7 @@
     <title>Custom Indices</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         @layer base {
             *,::backdrop,:after,:before {
@@ -926,17 +927,6 @@
         };
 
         // Chart.js Functions
-        function getThemeColors() {
-            const style = getComputedStyle(document.documentElement);
-            return {
-                primary: style.getPropertyValue('--primary').trim(),
-                foreground: style.getPropertyValue('--foreground').trim(),
-                border: style.getPropertyValue('--border').trim(),
-                mutedForeground: style.getPropertyValue('--muted-foreground').trim(),
-                background: style.getPropertyValue('--background').trim()
-            };
-        }
-
         function cssVarToRgba(cssVar, alpha = 1) {
             // Create a temporary element to resolve CSS variables to actual colors
             const tempEl = document.createElement('div');
@@ -1078,6 +1068,7 @@
         }
 
         async function createChart() {
+            if (!currentChartPeriod) currentChartPeriod = '1M'; // Prevent undefined period
             const result = await fetchChartData(currentChartPeriod, showSpy);
             
             if (chartInstance) chartInstance.destroy();
