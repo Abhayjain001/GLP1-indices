@@ -666,21 +666,32 @@
 
         /* Chart Controls */
         .chart-controls {
-            position: absolute;
-            left: 1.5rem;
-            bottom: -3rem;
-            z-index: 1;
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        .chart-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 1rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 1px solid var(--border);
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .chart-options {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .option-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 11px;
+            color: var(--muted-foreground);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .option-label input {
+            cursor: pointer;
         }
 
         .chart-title {
@@ -817,14 +828,25 @@
                             <div id="legend-date">--</div>
                         </div>
                         
-                        <div class="chart-controls">
+                        <canvas id="indexChart"></canvas>
+                    </div>
+                    <div class="chart-controls">
+                        <div class="chart-periods">
                             <button class="period-button" data-period="1D">1D</button>
                             <button class="period-button" data-period="1W">1W</button>
                             <button class="period-button active" data-period="1M">1M</button>
                             <button class="period-button" data-period="ITD">ITD</button>
                         </div>
-                        
-                        <canvas id="indexChart"></canvas>
+                        <div class="chart-options">
+                            <label class="option-label">
+                                <input type="checkbox" id="show-ma">
+                                30D MA
+                            </label>
+                            <label class="option-label">
+                                <input type="checkbox" id="show-spy">
+                                Compare vs SPY
+                            </label>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -847,6 +869,8 @@
         let chartInstance = null;
         let currentChartPeriod = '1M';
         let chartDataCache = {}; // Cache chart data to avoid repeated API calls
+        let showMA = false;
+        let showSpy = false;
 
         const themes = [
             'dark', 'light', 'hegemon', 'retroneon', 'oxide', 
@@ -978,184 +1002,153 @@
             }
         }
 
-        async function fetchChartData(period) {
-            // Check cache first
-            if (chartDataCache[period]) {
-                console.log(`Using cached data for ${period}`);
-                return chartDataCache[period];
+        async function fetchChartData(period, benchmark = false) {
+            const cacheKey = `${period}-${benchmark}`;
+            if (chartDataCache[cacheKey]) {
+                console.log(`Using cached data for ${cacheKey}`);
+                return chartDataCache[cacheKey];
             }
 
             try {
-                console.log(`Fetching fresh data for ${period}`);
-                const response = await fetch(`/api/chart?period=${period}`);
+                let url = `/api/chart?period=${period}`;
+                if (benchmark) {
+                    url += '&benchmark=SPY';
+                }
+                console.log(`Fetching fresh data from ${url}`);
+                const response = await fetch(url);
                 const result = await response.json();
                 
-                if (result.error || !result.data) {
+                if (result.error) {
                     console.error('Chart data error:', result.error);
-                    return [];
+                    return null;
                 }
                 
                 // Transform data for Chart.js time scale
-                const transformedData = result.data.map(point => ({
-                    x: new Date(point.time),
-                    y: point.value
-                }));
+                result.data = result.data.map(point => ({ x: new Date(point.time), y: point.value }));
+                if (result.benchmark_data) {
+                    result.benchmark_data = result.benchmark_data.map(point => ({ x: new Date(point.time), y: point.value }));
+                }
                 
-                // Cache the data
-                chartDataCache[period] = transformedData;
-                
-                return transformedData;
+                chartDataCache[cacheKey] = result;
+                return result;
                 
             } catch (error) {
                 console.error('Error fetching chart data:', error);
-                return [];
+                return null;
             }
         }
 
-        async function createChart() {
-            const ctx = document.getElementById('indexChart').getContext('2d');
-            const data = await fetchChartData(currentChartPeriod);
-            
-            // Destroy existing chart if it exists
-            if (chartInstance) {
-                chartInstance.destroy();
+        function calculateMA(data, windowSize) {
+            if (!data || data.length < windowSize) return [];
+            let movingAverages = [];
+            for (let i = windowSize - 1; i < data.length; i++) {
+                const window = data.slice(i - windowSize + 1, i + 1);
+                const sum = window.reduce((acc, val) => acc + val.y, 0);
+                movingAverages.push({ x: data[i].x, y: sum / windowSize });
             }
+            return movingAverages;
+        }
+
+        async function createChart() {
+            const result = await fetchChartData(currentChartPeriod, showSpy);
             
-            // Handle empty data
-            if (!data || data.length === 0) {
+            if (chartInstance) chartInstance.destroy();
+            if (!result || !result.data || result.data.length === 0) {
                 console.warn('No chart data available for period:', currentChartPeriod);
                 return;
             }
-            
-            // Get theme-aware colors using CSS variables
-            const primaryColor = cssVarToRgba(`var(--primary)`);
-            const foregroundColor = cssVarToRgba(`var(--foreground)`);
-            const backgroundColor = cssVarToRgba(`var(--background)`);
-            const borderColor = cssVarToRgba(`var(--border)`);
-            const mutedColor = cssVarToRgba(`var(--muted-foreground)`);
+
+            const ctx = document.getElementById('indexChart').getContext('2d');
+            const primaryColor = cssVarToRgba('var(--primary)');
+            const accentColor = cssVarToRgba('var(--accent)');
+            const mutedColor = cssVarToRgba('var(--muted-foreground)', 0.7);
             
             const gradientFill = ctx.createLinearGradient(0, 0, 0, 400);
-            gradientFill.addColorStop(0, cssVarToRgba(`var(--primary)`, 0.2));
-            gradientFill.addColorStop(1, cssVarToRgba(`var(--primary)`, 0.01));
-            
+            gradientFill.addColorStop(0, cssVarToRgba('var(--primary)', 0.2));
+            gradientFill.addColorStop(1, cssVarToRgba('var(--primary)', 0.01));
+
+            let datasets = [{
+                label: 'Index',
+                data: result.data,
+                borderColor: primaryColor,
+                backgroundColor: gradientFill,
+                borderWidth: 2.5,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 0,
+                pointHoverRadius: 0,
+            }];
+
+            if (showMA) {
+                const maData = calculateMA(result.data, 30);
+                datasets.push({
+                    label: '30D MA',
+                    data: maData,
+                    borderColor: primaryColor,
+                    borderWidth: 1.5,
+                    borderDash: [3, 3],
+                    fill: false,
+                    pointRadius: 0,
+                    tension: 0.4,
+                });
+            }
+
+            if (showSpy && result.benchmark_data) {
+                datasets.push({
+                    label: 'SPY',
+                    data: result.benchmark_data,
+                    borderColor: accentColor,
+                    borderWidth: 1.5,
+                    fill: false,
+                    pointRadius: 0,
+                    tension: 0.4,
+                });
+            }
+
             chartInstance = new Chart(ctx, {
                 type: 'line',
-                data: {
-                    datasets: [{
-                        label: '',
-                        data: data,
-                        borderColor: primaryColor,
-                        backgroundColor: gradientFill,
-                        borderWidth: 2,
-                        fill: true,
-                        tension: 0.4,
-                        pointRadius: 0,
-                        pointHoverRadius: 0,
-                        pointHoverBackgroundColor: 'transparent',
-                        pointHoverBorderColor: 'transparent',
-                        pointHoverBorderWidth: 0,
-                        borderCapStyle: 'round',
-                        borderJoinStyle: 'round'
-                    }]
-                },
+                data: { datasets },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    animation: {
-                        duration: 300,
-                    },
-                    interaction: {
-                        intersect: false,
-                        mode: 'index'
-                    },
-                    onHover: (event, chartElement, chart) => {
-                        updateLegend(chart);
-                    },
-                    plugins: {
-                        legend: {
-                            display: false
-                        },
-                        tooltip: {
-                            enabled: false
-                        }
-                    },
+                    animation: { duration: 300 },
+                    interaction: { intersect: false, mode: 'index' },
+                    onHover: (event, chartElement, chart) => updateLegend(chart),
+                    plugins: { legend: { display: false }, tooltip: { enabled: false } },
                     scales: {
                         x: {
                             type: 'time',
-                            time: {
-                                unit: 'day',
-                                displayFormats: {
-                                    day: 'MMM d'
-                                }
-                            },
-                            grid: {
-                                display: false
-                            },
+                            time: { unit: 'day', displayFormats: { day: 'MMM d' } },
+                            grid: { display: false }, // No vertical grid lines
                             ticks: {
-                                display: true,
-                                color: cssVarToRgba('var(--muted-foreground)', 0.7),
-                                font: {
-                                    size: 11,
-                                    family: 'var(--font-geist-mono)',
-                                    weight: '400'
-                                },
-                                maxTicksLimit: 5,
-                                padding: 15,
-                                autoSkip: true,
-                                maxRotation: 0,
-                                minRotation: 0
+                                color: mutedColor,
+                                font: { size: 11, family: 'var(--font-geist-mono)' },
+                                maxTicksLimit: 5, padding: 15, autoSkip: true,
                             },
-                            border: {
-                                display: false
-                            }
+                            border: { display: false }
                         },
                         y: {
                             position: 'right',
-                            grid: {
-                                display: true,
-                                color: cssVarToRgba('var(--border)', 0.3),
-                                lineWidth: 1,
-                                drawBorder: false
-                            },
+                            grid: { display: false }, // No horizontal grid lines
                             ticks: {
-                                display: true,
-                                color: cssVarToRgba('var(--muted-foreground)', 0.7),
-                                font: {
-                                    size: 11,
-                                    family: 'var(--font-geist-mono)',
-                                    weight: '400'
-                                },
-                                padding: 10,
-                                maxTicksLimit: 5
+                                color: mutedColor,
+                                font: { size: 11, family: 'var(--font-geist-mono)' },
+                                padding: 10, maxTicksLimit: 5
                             },
-                            border: {
-                                display: false
-                            }
+                            border: { display: false }
                         }
                     }
                 },
                 plugins: [crosshairPlugin]
             });
-            
-            // Initial legend update
             updateLegend(chartInstance);
         }
 
-
-
         async function loadChartPeriod(period) {
             currentChartPeriod = period;
-            
-            // Update active button state
             document.querySelectorAll('.period-button').forEach(btn => {
-                if (btn.getAttribute('data-period') === period) {
-                    btn.classList.add('active');
-                } else {
-                    btn.classList.remove('active');
-                }
+                btn.classList.toggle('active', btn.getAttribute('data-period') === period);
             });
-            
-            // Recreate chart with new period
             await createChart();
         }
 
@@ -1174,9 +1167,7 @@
             
             // Recreate chart with new theme colors
             if (chartInstance) {
-                setTimeout(async () => {
-                    await createChart();
-                }, 150); // Small delay to ensure CSS variables are updated
+                setTimeout(createChart, 150); // Small delay for CSS vars
             }
         }
 
@@ -1230,11 +1221,22 @@
                 
                 // Add event listeners to period buttons
                 document.querySelectorAll('.period-button').forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        const period = btn.getAttribute('data-period');
-                        loadChartPeriod(period);
-                    });
+                    btn.addEventListener('click', () => loadChartPeriod(btn.dataset.period));
                 });
+
+                // Add listeners for new chart options
+                document.getElementById('show-ma').addEventListener('change', (e) => {
+                    showMA = e.target.checked;
+                    createChart();
+                });
+                document.getElementById('show-spy').addEventListener('change', (e) => {
+                    showSpy = e.target.checked;
+                    // Clear cache for period when toggling benchmark
+                    const cacheKey = `${currentChartPeriod}-true`;
+                    delete chartDataCache[cacheKey];
+                    createChart();
+                });
+
             } else {
                 constituents.style.display = 'none';
                 chart.style.display = 'none';
