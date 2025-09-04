@@ -839,10 +839,6 @@
                         </div>
                         <div class="chart-options">
                             <label class="option-label">
-                                <input type="checkbox" id="show-ma">
-                                30D MA
-                            </label>
-                            <label class="option-label">
                                 <input type="checkbox" id="show-spy">
                                 Compare vs SPY
                             </label>
@@ -869,7 +865,6 @@
         let chartInstance = null;
         let currentChartPeriod = '1M';
         let chartDataCache = {}; // Cache chart data to avoid repeated API calls
-        let showMA = false;
         let showSpy = false;
 
         const themes = [
@@ -1038,17 +1033,6 @@
             }
         }
 
-        function calculateMA(data, windowSize) {
-            if (!data || data.length < windowSize) return [];
-            let movingAverages = [];
-            for (let i = windowSize - 1; i < data.length; i++) {
-                const window = data.slice(i - windowSize + 1, i + 1);
-                const sum = window.reduce((acc, val) => acc + val.y, 0);
-                movingAverages.push({ x: data[i].x, y: sum / windowSize });
-            }
-            return movingAverages;
-        }
-
         async function createChart() {
             const result = await fetchChartData(currentChartPeriod, showSpy);
             
@@ -1062,36 +1046,17 @@
             const primaryColor = cssVarToRgba('var(--primary)');
             const accentColor = cssVarToRgba('var(--accent)');
             const mutedColor = cssVarToRgba('var(--muted-foreground)', 0.7);
-            
-            const gradientFill = ctx.createLinearGradient(0, 0, 0, 400);
-            gradientFill.addColorStop(0, cssVarToRgba('var(--primary)', 0.2));
-            gradientFill.addColorStop(1, cssVarToRgba('var(--primary)', 0.01));
 
             let datasets = [{
                 label: 'Index',
                 data: result.data,
                 borderColor: primaryColor,
-                backgroundColor: gradientFill,
-                borderWidth: 2.5,
-                fill: true,
+                borderWidth: 2,
+                fill: false, // User wants a pure line chart
                 tension: 0.4,
                 pointRadius: 0,
                 pointHoverRadius: 0,
             }];
-
-            if (showMA) {
-                const maData = calculateMA(result.data, 30);
-                datasets.push({
-                    label: '30D MA',
-                    data: maData,
-                    borderColor: primaryColor,
-                    borderWidth: 1.5,
-                    borderDash: [3, 3],
-                    fill: false,
-                    pointRadius: 0,
-                    tension: 0.4,
-                });
-            }
 
             if (showSpy && result.benchmark_data) {
                 datasets.push({
@@ -1099,6 +1064,7 @@
                     data: result.benchmark_data,
                     borderColor: accentColor,
                     borderWidth: 1.5,
+                    borderDash: [5, 5], // Dashed line for benchmark
                     fill: false,
                     pointRadius: 0,
                     tension: 0.4,
@@ -1225,10 +1191,6 @@
                 });
 
                 // Add listeners for new chart options
-                document.getElementById('show-ma').addEventListener('change', (e) => {
-                    showMA = e.target.checked;
-                    createChart();
-                });
                 document.getElementById('show-spy').addEventListener('change', (e) => {
                     showSpy = e.target.checked;
                     // Clear cache for period when toggling benchmark
