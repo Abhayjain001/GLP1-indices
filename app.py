@@ -219,7 +219,7 @@ async def get_chart_data(period: str = '1M', benchmark: str = None):
 
         # Determine start date
         if period == '1D':
-            start_date = end_date - pd.Timedelta(days=2) # Fetch 2 days for change calc
+            start_date = end_date - pd.Timedelta(days=4) # Fetch 4 days to ensure we get at least 2 data points
         elif period == '1W':
             start_date = end_date - pd.Timedelta(days=7)
         elif period == '1M':

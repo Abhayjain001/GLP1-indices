@@ -911,6 +911,19 @@
             'alucard': 'ALUCARD'
         };
 
+        const chartColorMap = {
+            'light': { index: '#2563eb', spy: '#f97316', text: 'rgba(100, 116, 139, 0.7)' },
+            'dark': { index: '#60a5fa', spy: '#fb923c', text: 'rgba(156, 163, 175, 0.7)' },
+            'hegemon': { index: '#a78bfa', spy: '#facc15', text: 'rgba(161, 161, 170, 0.7)' },
+            'retroneon': { index: '#4ade80', spy: '#f472b6', text: 'rgba(161, 161, 170, 0.7)' },
+            'oxide': { index: '#f59e0b', spy: '#67e8f9', text: 'rgba(156, 163, 175, 0.7)' },
+            'deeplearning': { index: '#a78bfa', spy: '#f472b6', text: 'rgba(161, 161, 170, 0.7)' },
+            'biolum': { index: '#2dd4bf', spy: '#fde047', text: 'rgba(134, 239, 172, 0.7)' },
+            'paladin': { index: '#a3e635', spy: '#22d3ee', text: 'rgba(203, 213, 225, 0.7)' },
+            'cobalt': { index: '#60a5fa', spy: '#facc15', text: 'rgba(156, 163, 175, 0.7)' },
+            'alucard': { index: '#ef4444', spy: '#f59e0b', text: 'rgba(209, 213, 219, 0.7)' }
+        };
+
         // Chart.js Functions
         function getThemeColors() {
             const style = getComputedStyle(document.documentElement);
@@ -971,8 +984,10 @@
             const legendValue = document.getElementById('legend-value');
             const legendDate = document.getElementById('legend-date');
             const explicitLegend = document.getElementById('explicit-legend');
+            const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+            const colors = chartColorMap[currentTheme];
             
-            explicitLegend.innerHTML = ''; // Clear previous legend items
+            explicitLegend.innerHTML = '';
 
             let dataPoint = null;
             if (chart.tooltip?._active?.length) {
@@ -1002,18 +1017,15 @@
                 legendDate.textContent = '--';
             }
 
-            // Build the explicit, color-coded legend
             const indexName = 'Abhay GLP-1 Index';
-            const primaryColor = cssVarToRgba('var(--primary)');
             explicitLegend.innerHTML += `
                 <div class="legend-item">
-                    <div class="legend-color-box" style="background-color: ${primaryColor};"></div>
+                    <div class="legend-color-box" style="background-color: ${colors.index};"></div>
                     <span>${indexName}</span>
                 </div>
             `;
 
             if (showSpy && result.benchmark_data) {
-                const accentColor = cssVarToRgba('var(--accent)');
                 let spyReturnText = '';
                 if (result.benchmark_period_return !== null) {
                     const sign = result.benchmark_period_return >= 0 ? '+' : '';
@@ -1021,7 +1033,7 @@
                 }
                 explicitLegend.innerHTML += `
                     <div class="legend-item">
-                        <div class="legend-color-box" style="background-color: ${accentColor};"></div>
+                        <div class="legend-color-box" style="background-color: ${colors.spy};"></div>
                         <span>SPY ${spyReturnText}</span>
                     </div>
                 `;
@@ -1074,14 +1086,13 @@
             }
 
             const ctx = document.getElementById('indexChart').getContext('2d');
-            const primaryColor = cssVarToRgba('var(--primary)');
-            const accentColor = cssVarToRgba('var(--accent)');
-            const mutedColor = cssVarToRgba('var(--muted-foreground)', 0.7);
+            const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+            const colors = chartColorMap[currentTheme];
 
             let datasets = [{
                 label: 'Index',
                 data: result.data,
-                borderColor: primaryColor,
+                borderColor: colors.index,
                 borderWidth: 2,
                 fill: false, // User wants a pure line chart
                 tension: 0.4,
@@ -1093,7 +1104,7 @@
                 datasets.push({
                     label: 'SPY',
                     data: result.benchmark_data,
-                    borderColor: accentColor,
+                    borderColor: colors.spy,
                     borderWidth: 1.5,
                     borderDash: [5, 5], // Dashed line for benchmark
                     fill: false,
@@ -1118,7 +1129,7 @@
                             time: { unit: 'day', displayFormats: { day: 'MMM d' } },
                             grid: { display: false }, // No vertical grid lines
                             ticks: {
-                                color: () => cssVarToRgba('var(--muted-foreground)', 0.7),
+                                color: colors.text,
                                 font: { size: 11, family: 'var(--font-geist-mono)' },
                                 maxTicksLimit: 5, padding: 15, autoSkip: true,
                             },
@@ -1128,7 +1139,7 @@
                             position: 'right',
                             grid: { display: false }, // No horizontal grid lines
                             ticks: {
-                                color: () => cssVarToRgba('var(--muted-foreground)', 0.7),
+                                color: colors.text,
                                 font: { size: 11, family: 'var(--font-geist-mono)' },
                                 padding: 10, maxTicksLimit: 5
                             },
