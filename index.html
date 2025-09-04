@@ -662,6 +662,31 @@
         #legend-date {
             font-size: 11px;
             color: var(--muted-foreground);
+            margin-bottom: 0.75rem;
+        }
+
+        #explicit-legend {
+            font-size: 11px;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .legend-color-box {
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+        }
+
+        #spy-return {
+            font-size: 11px;
+            margin-top: 0.25rem;
         }
 
         /* Chart Controls */
@@ -826,6 +851,7 @@
                             <div id="legend-title">Abhay GLP-1 Index</div>
                             <div id="legend-value">--</div>
                             <div id="legend-date">--</div>
+                            <div id="explicit-legend"></div>
                         </div>
                         
                         <canvas id="indexChart"></canvas>
@@ -941,59 +967,64 @@
             }
         };
 
-        function updateLegend(chart) {
+        function updateLegend(chart, result) {
             const legendValue = document.getElementById('legend-value');
             const legendDate = document.getElementById('legend-date');
+            const explicitLegend = document.getElementById('explicit-legend');
             
-            let dataPoint;
+            explicitLegend.innerHTML = ''; // Clear previous legend items
 
-            if (chart.tooltip._active && chart.tooltip._active.length) {
+            let dataPoint = null;
+            if (chart.tooltip?._active?.length) {
                 const activePoint = chart.tooltip._active[0];
-                const datasetIndex = activePoint.datasetIndex;
-                const index = activePoint.index;
-                dataPoint = chart.data.datasets[datasetIndex].data[index];
-            } else {
-                const dataset = chart.data.datasets[0].data;
-                if (dataset.length > 0) {
-                    dataPoint = dataset[dataset.length - 1];
-                }
+                dataPoint = chart.data.datasets[activePoint.datasetIndex].data[activePoint.index];
+            } else if (chart.data.datasets[0]?.data?.length) {
+                const mainDataset = chart.data.datasets[0].data;
+                dataPoint = mainDataset[mainDataset.length - 1];
             }
 
             if (dataPoint) {
-                // Get period return based on current period
                 let periodReturn = '--';
                 if (indexData) {
                     switch(currentChartPeriod) {
-                        case '1D':
-                            periodReturn = indexData.day_return;
-                            break;
-                        case '1W':
-                            periodReturn = indexData.week_return;
-                            break;
-                        case '1M':
-                            periodReturn = indexData.month_return;
-                            break;
-                        case 'ITD':
-                            periodReturn = indexData.total_return;
-                            break;
-                        default:
-                            periodReturn = indexData.month_return;
+                        case '1D': periodReturn = indexData.day_return; break;
+                        case '1W': periodReturn = indexData.week_return; break;
+                        case '1M': periodReturn = indexData.month_return; break;
+                        case 'ITD': periodReturn = indexData.total_return; break;
+                        default: periodReturn = indexData.month_return;
                     }
                 }
-                
-                const returnText = periodReturn !== '--' ? 
-                    ` (${periodReturn >= 0 ? '+' : ''}${periodReturn.toFixed(2)}%)` : 
-                    '';
-                
+                const returnText = periodReturn !== '--' ? ` (${periodReturn >= 0 ? '+' : ''}${periodReturn.toFixed(2)}%)` : '';
                 legendValue.textContent = `${dataPoint.y.toFixed(2)}${returnText}`;
-                legendDate.textContent = dataPoint.x.toLocaleDateString('en-US', { 
-                    year: 'numeric', 
-                    month: 'short', 
-                    day: 'numeric' 
-                });
+                legendDate.textContent = dataPoint.x.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
             } else {
                 legendValue.textContent = '--';
                 legendDate.textContent = '--';
+            }
+
+            // Build the explicit, color-coded legend
+            const indexName = 'Abhay GLP-1 Index';
+            const primaryColor = cssVarToRgba('var(--primary)');
+            explicitLegend.innerHTML += `
+                <div class="legend-item">
+                    <div class="legend-color-box" style="background-color: ${primaryColor};"></div>
+                    <span>${indexName}</span>
+                </div>
+            `;
+
+            if (showSpy && result.benchmark_data) {
+                const accentColor = cssVarToRgba('var(--accent)');
+                let spyReturnText = '';
+                if (result.benchmark_period_return !== null) {
+                    const sign = result.benchmark_period_return >= 0 ? '+' : '';
+                    spyReturnText = ` (${sign}${result.benchmark_period_return.toFixed(2)}%)`;
+                }
+                explicitLegend.innerHTML += `
+                    <div class="legend-item">
+                        <div class="legend-color-box" style="background-color: ${accentColor};"></div>
+                        <span>SPY ${spyReturnText}</span>
+                    </div>
+                `;
             }
         }
 
@@ -1079,7 +1110,7 @@
                     maintainAspectRatio: false,
                     animation: { duration: 300 },
                     interaction: { intersect: false, mode: 'index' },
-                    onHover: (event, chartElement, chart) => updateLegend(chart),
+                    onHover: (event, chartElement, chart) => updateLegend(chart, result),
                     plugins: { legend: { display: false }, tooltip: { enabled: false } },
                     scales: {
                         x: {
@@ -1087,7 +1118,7 @@
                             time: { unit: 'day', displayFormats: { day: 'MMM d' } },
                             grid: { display: false }, // No vertical grid lines
                             ticks: {
-                                color: mutedColor,
+                                color: () => cssVarToRgba('var(--muted-foreground)', 0.7),
                                 font: { size: 11, family: 'var(--font-geist-mono)' },
                                 maxTicksLimit: 5, padding: 15, autoSkip: true,
                             },
@@ -1097,7 +1128,7 @@
                             position: 'right',
                             grid: { display: false }, // No horizontal grid lines
                             ticks: {
-                                color: mutedColor,
+                                color: () => cssVarToRgba('var(--muted-foreground)', 0.7),
                                 font: { size: 11, family: 'var(--font-geist-mono)' },
                                 padding: 10, maxTicksLimit: 5
                             },
@@ -1107,7 +1138,7 @@
                 },
                 plugins: [crosshairPlugin]
             });
-            updateLegend(chartInstance);
+            updateLegend(chartInstance, result);
         }
 
         async function loadChartPeriod(period) {
