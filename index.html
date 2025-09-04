@@ -868,6 +868,7 @@
                                 <input type="checkbox" id="show-spy">
                                 Compare vs SPY
                             </label>
+                            <button class="period-button" id="export-chart-btn">Export PNG</button>
                         </div>
                     </div>
                 </div>
@@ -1160,6 +1161,15 @@
             await createChart();
         }
 
+        function exportChart() {
+            if (chartInstance) {
+                const link = document.createElement('a');
+                link.href = chartInstance.toBase64Image();
+                link.download = 'abhay-glp1-index-chart.png';
+                link.click();
+            }
+        }
+
         function toggleTheme() {
             const html = document.documentElement;
             const themeText = document.getElementById('theme-text');
@@ -1240,6 +1250,8 @@
                     delete chartDataCache[cacheKey];
                     createChart();
                 });
+
+                document.getElementById('export-chart-btn').addEventListener('click', exportChart);
 
             } else {
                 constituents.style.display = 'none';
