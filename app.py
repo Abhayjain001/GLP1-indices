@@ -275,14 +275,19 @@ async def get_chart_data(period: str = '1M', benchmark: str = None):
 
         # --- Handle Benchmark ---
         benchmark_data = []
+        benchmark_period_return = None
         if benchmark:
             bench_prices_df = db.get_price_history(benchmark, start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))
             if not bench_prices_df.empty:
-                # Normalize benchmark to start at the same value as our index on the start date
-                bench_start_value = bench_prices_df['adj_close'].iloc[0]
-                index_start_value = index_values.iloc[0]
+                # Calculate period return for the benchmark
+                bench_start_price = bench_prices_df['adj_close'].iloc[0]
+                bench_end_price = bench_prices_df['adj_close'].iloc[-1]
+                if bench_start_price != 0:
+                    benchmark_period_return = round(((bench_end_price - bench_start_price) / bench_start_price) * 100, 2)
 
-                normalized_bench = (bench_prices_df['adj_close'] / bench_start_value) * index_start_value
+                # Normalize benchmark to start at the same value as our index on the start date
+                index_start_value = index_values.iloc[0]
+                normalized_bench = (bench_prices_df['adj_close'] / bench_start_price) * index_start_value
 
                 benchmark_data = [{
                     'time': date.strftime('%Y-%m-%d'),
@@ -293,6 +298,7 @@ async def get_chart_data(period: str = '1M', benchmark: str = None):
             'period': period,
             'data': chart_data,
             'benchmark_data': benchmark_data,
+            'benchmark_period_return': benchmark_period_return,
             'inception_date': INCEPTION_DATE,
             'start_date': start_date.strftime('%Y-%m-%d'),
             'end_date': end_date.strftime('%Y-%m-%d')
