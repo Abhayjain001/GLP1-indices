@@ -67,7 +67,8 @@ def backfill_all_tickers():
     Fetches data from the inception date to today.
     """
     print("Starting historical data backfill...")
-    end_date = datetime.today()
+    # Add one day to the end date because yfinance's `end` parameter is exclusive.
+    end_date = datetime.today() + pd.Timedelta(days=1)
 
     # Also include SPY for benchmark comparison
     all_tickers_to_backfill = STOCK_TICKERS + ['SPY']
