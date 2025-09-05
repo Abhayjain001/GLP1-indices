@@ -2,7 +2,7 @@ import sqlite3
 import pandas as pd
 import yfinance as yf
 from datetime import datetime
-from config import STOCK_TICKERS, INCEPTION_DATE
+from config import STOCK_TICKERS, INCEPTION_DATE, BENCHMARK_TICKERS
 
 DB_PATH = 'history.db'
 
@@ -69,8 +69,8 @@ def backfill_all_tickers():
     print("Starting historical data backfill...")
     end_date = datetime.today()
 
-    # Also include SPY for benchmark comparison
-    all_tickers_to_backfill = STOCK_TICKERS + ['SPY']
+    # Include benchmarks for comparison (idempotent)
+    all_tickers_to_backfill = list(dict.fromkeys(STOCK_TICKERS + BENCHMARK_TICKERS))
 
     for ticker in all_tickers_to_backfill:
         try:
