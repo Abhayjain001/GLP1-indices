@@ -1,0 +1,1432 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Indices</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <style>
+        @layer base {
+            *,::backdrop,:after,:before {
+                box-sizing: border-box;
+                border: 0 solid;
+                margin: 0;
+                padding: 0
+            }
+
+            html {
+                -webkit-text-size-adjust: 100%;
+                tab-size: 4;
+                line-height: 1.5;
+                font-family: ui-sans-serif,system-ui,sans-serif;
+                -webkit-tap-highlight-color: transparent
+            }
+
+            body {
+                line-height: inherit
+            }
+
+            hr {
+                height: 0;
+                color: inherit;
+                border-top-width: 1px
+            }
+
+            h1,h2,h3,h4,h5,h6 {
+                font-size: inherit;
+                font-weight: inherit
+            }
+
+            a {
+                color: inherit;
+                text-decoration: inherit
+            }
+
+            b,strong {
+                font-weight: bolder
+            }
+
+            button,input,optgroup,select,textarea {
+                font: inherit;
+                color: inherit;
+                background-color: transparent;
+                border-radius: 0
+            }
+
+            ::placeholder {
+                opacity: 1;
+                color: #9ca3af
+            }
+
+            [hidden] {
+                display: none !important
+            }
+        }
+
+        :root {
+            --font-geist-mono: 'JetBrains Mono', 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            --font-mono: var(--font-geist-mono);
+            --color-white: #fff;
+            --spacing: .25rem;
+            --container-xs: 20rem;
+            --container-sm: 24rem;
+            --container-md: 28rem;
+            --container-2xl: 42rem;
+            --container-3xl: 48rem;
+            --container-6xl: 72rem;
+            --text-xs: .75rem;
+            --text-xs--line-height: calc(1/.75);
+            --text-sm: .875rem;
+            --text-sm--line-height: calc(1.25/.875);
+            --text-base: 1rem;
+            --text-base--line-height: calc(1.5/1);
+            --text-lg: 1.125rem;
+            --text-lg--line-height: calc(1.75/1.125);
+            --text-xl: 1.25rem;
+            --text-xl--line-height: calc(1.75/1.25);
+            --text-2xl: 1.5rem;
+            --text-2xl--line-height: calc(2/1.5);
+            --text-3xl: 1.875rem;
+            --text-3xl--line-height: calc(2.25/1.875);
+            --font-weight-normal: 400;
+            --font-weight-medium: 500;
+            --font-weight-bold: 700;
+            --tracking-tight: -.025em;
+            --tracking-wide: .025em;
+            --tracking-wider: .05em;
+            --tracking-widest: .1em;
+            --leading-tight: 1.25;
+            --leading-relaxed: 1.625;
+            --default-transition-duration: .15s;
+            --default-transition-timing-function: cubic-bezier(.4,0,.2,1);
+        }
+
+        body {
+            font-family: var(--font-geist-mono);
+            background: var(--background);
+            color: var(--foreground);
+            overflow-x: hidden;
+            position: relative;
+            font-size: 13px;
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+            opacity: 0.15;
+            mix-blend-mode: soft-light;
+            filter: invert(0);
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='1' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+            background-repeat: repeat;
+        }
+
+        [data-theme="light"] {
+            --radius: .5rem;
+            --background: oklch(96% .005 90);
+            --foreground: oklch(30% .013 90);
+            --primary: oklch(.546 .245 262.881);
+            --muted-foreground: oklch(48% .013 90);
+            --primary-foreground: oklch(97% .012 90);
+            --accent: oklch(76% .15 345);
+            --border: oklch(85% .006 90);
+            --ring: var(--primary);
+        }
+
+        [data-theme="dark"] {
+            --radius: .625rem;
+            --background: oklch(18% .02 280);
+            --foreground: oklch(94% .02 250);
+            --primary: oklch(.65 .245 262.881);
+            --muted-foreground: oklch(75% .02 250);
+            --primary-foreground: oklch(15% .01 250);
+            --accent: oklch(65% .12 200);
+            --border: oklch(60% .005 250/.2);
+            --ring: var(--primary);
+        }
+
+        [data-theme="hegemon"] {
+            --radius: .2rem;
+            --background: oklch(13% .02 260);
+            --foreground: oklch(90% .02 260);
+            --primary: oklch(68% .25 270);
+            --muted-foreground: oklch(75% .04 260);
+            --primary-foreground: oklch(13% .02 260);
+            --accent: oklch(60% .18 20);
+            --border: oklch(30% .05 260);
+            --ring: var(--primary);
+        }
+
+        [data-theme="retroneon"] {
+            --radius: .25rem;
+            --background: oklch(15% .01 260);
+            --foreground: oklch(90% .04 260);
+            --primary: oklch(80% .25 120);
+            --muted-foreground: oklch(70% .04 260);
+            --primary-foreground: oklch(10% .01 260);
+            --accent: oklch(75% .25 260);
+            --border: oklch(30% .03 260);
+            --ring: var(--primary);
+        }
+
+        [data-theme="oxide"] {
+            --radius: .25rem;
+            --background: oklch(15% .01 260);
+            --foreground: oklch(85% .03 80);
+            --primary: oklch(75% .15 40);
+            --muted-foreground: oklch(70% .03 80);
+            --primary-foreground: oklch(15% .02 130);
+            --accent: oklch(75% .15 40);
+            --border: oklch(30% .03 260);
+            --ring: var(--primary);
+        }
+
+        [data-theme="deeplearning"] {
+            --radius: .375rem;
+            --background: oklch(15% .01 260);
+            --foreground: oklch(90% .03 270);
+            --primary: oklch(60% .18 280);
+            --muted-foreground: oklch(70% .05 270);
+            --primary-foreground: oklch(10% .01 260);
+            --accent: oklch(65% .2 320);
+            --border: oklch(35% .05 260);
+            --ring: var(--primary);
+        }
+
+        [data-theme="biolum"] {
+            --radius: .5rem;
+            --background: oklch(8% .02 240);
+            --foreground: oklch(85% .1 170);
+            --primary: oklch(75% .22 170);
+            --muted-foreground: oklch(60% .08 170);
+            --primary-foreground: oklch(5% .01 240);
+            --accent: oklch(70% .18 150);
+            --border: oklch(22% .05 240);
+            --ring: var(--primary);
+        }
+
+        [data-theme="paladin"] {
+            --radius: .375rem;
+            --background: oklch(12% .018 135);
+            --foreground: oklch(88% .018 135);
+            --primary: oklch(89% .049 128);
+            --muted-foreground: oklch(70% .04 135);
+            --primary-foreground: oklch(12% .018 135);
+            --accent: oklch(92% .178 104);
+            --border: oklch(28% .035 135);
+            --ring: var(--primary);
+        }
+
+        [data-theme="cobalt"] {
+            --radius: .38rem;
+            --background: oklch(11% .02 270);
+            --foreground: oklch(93% .02 85);
+            --primary: oklch(65% .22 220);
+            --muted-foreground: oklch(75% .04 90);
+            --primary-foreground: var(--background);
+            --accent: oklch(78% .24 55);
+            --border: oklch(28% .05 270);
+            --ring: var(--primary);
+        }
+
+        [data-theme="alucard"] {
+            --radius: 0;
+            --background: oklch(15% .01 0);
+            --foreground: oklch(90% .05 15);
+            --primary: oklch(60% .25 20);
+            --muted-foreground: oklch(75% .03 15);
+            --primary-foreground: oklch(10% .01 0);
+            --accent: oklch(40% .2 25);
+            --border: oklch(30% .05 0);
+            --ring: var(--primary);
+        }
+
+        * {
+            border-color: var(--border);
+            outline-color: var(--ring);
+            line-height: 1.33;
+        }
+
+        body {
+            background: var(--background);
+            color: var(--foreground);
+            font-family: var(--font-geist-mono);
+            -webkit-text-size-adjust: 100%;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        ::selection {
+            background-color: var(--primary);
+            color: var(--primary-foreground);
+        }
+
+        button:focus-visible,
+        a:focus-visible,
+        input:focus-visible,
+        textarea:focus-visible,
+        select:focus-visible {
+            outline: 2px solid var(--ring);
+            outline-offset: 2px;
+        }
+
+        a, button, input, textarea, select {
+            transition-property: color, background-color, border-color, outline-color, text-decoration-color;
+            transition-timing-function: var(--default-transition-timing-function);
+            transition-duration: var(--default-transition-duration);
+        }
+
+        .header {
+            backdrop-filter: blur(20px);
+            border-radius: 0 0 var(--radius) var(--radius);
+            background: oklch(from var(--background) l c h / 0.8);
+        }
+
+        .logo {
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 13px;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .logo:hover {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .header-title {
+            color: var(--primary);
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 0.375rem;
+        }
+
+        .header-subtitle {
+            color: var(--muted-foreground);
+            font-size: 13px;
+            margin-bottom: 2rem;
+        }
+
+        .section {
+            background: var(--background);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+            z-index: 10;
+        }
+
+        .section-title {
+            color: var(--primary);
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .index-table {
+            width: 100%;
+        }
+
+        .main-table, .constituents-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--background);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+
+        .main-table th, .constituents-table th {
+            background: oklch(from var(--primary) l c h / 0.1);
+            color: var(--primary);
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .main-table td, .constituents-table td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+        }
+
+        .index-row {
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+        }
+
+        .index-row:hover {
+            background: oklch(from var(--primary) l c h / 0.05);
+        }
+
+        .index-name {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .expand-icon {
+            transition: transform 0.2s ease;
+            font-size: 12px;
+        }
+
+        .expand-icon.expanded {
+            transform: rotate(90deg);
+        }
+
+        .index-value {
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .return-cell {
+            font-weight: 600;
+        }
+
+        .return-positive {
+            color: #10b981;
+        }
+
+        .return-negative {
+            color: #ef4444;
+        }
+
+        .return-neutral {
+            color: var(--muted-foreground);
+        }
+
+        .constituents-section {
+            margin-top: 1.5rem;
+            animation: slideDown 0.3s ease;
+        }
+
+        .constituents-title {
+            color: var(--primary);
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .constituents-table tbody tr:hover {
+            background: oklch(from var(--primary) l c h / 0.03);
+        }
+
+        .sortable {
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.15s ease;
+        }
+
+        .sortable:hover {
+            background: oklch(from var(--primary) l c h / 0.15);
+        }
+
+        .sort-indicator {
+            font-size: 10px;
+            margin-left: 0.25rem;
+            opacity: 0.7;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .stock-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.5rem;
+        }
+
+        .stock-symbol {
+            color: var(--foreground);
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .stock-exchange {
+            color: var(--muted-foreground);
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .stock-name {
+            color: var(--muted-foreground);
+            font-size: 11px;
+            margin-bottom: 0.75rem;
+            line-height: 1.4;
+        }
+
+        .stock-price {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .stock-change {
+            font-size: 12px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .change-positive {
+            color: #10b981;
+        }
+
+        .change-negative {
+            color: #ef4444;
+        }
+
+        .change-neutral {
+            color: var(--muted-foreground);
+        }
+
+        .stock-returns {
+            margin-top: 0.75rem;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+            font-size: 10px;
+        }
+
+        .return-item {
+            text-align: center;
+            padding: 0.375rem;
+            border-radius: calc(var(--radius) / 2);
+            background: oklch(from var(--border) l c h / 0.3);
+        }
+
+        .return-label {
+            color: var(--muted-foreground);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .return-value {
+            font-weight: 600;
+            margin-top: 0.125rem;
+        }
+
+        .loading {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            color: var(--muted-foreground);
+            font-size: 12px;
+            padding: 2rem;
+        }
+
+        .loading.active {
+            display: flex;
+        }
+
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--border);
+            border-top: 2px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .stats-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            font-size: 11px;
+            color: var(--muted-foreground);
+        }
+
+        .last-updated {
+            color: var(--muted-foreground);
+            font-size: 10px;
+            text-align: center;
+            margin-top: 1rem;
+        }
+
+        .theme-button {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--primary);
+            font-family: inherit;
+            font-size: 11px;
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+            border-radius: var(--radius);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            transition: all 0.15s ease;
+        }
+
+        .theme-button:hover {
+            border-color: var(--primary);
+            background: oklch(from var(--primary) l c h / 0.1);
+        }
+
+        .theme-button:focus-visible {
+            outline: 2px solid var(--ring);
+            outline-offset: 2px;
+        }
+
+        .footer {
+            margin-top: 3rem;
+            padding: 1rem 0;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            color: var(--muted-foreground);
+        }
+
+        /* Chart Styles */
+        .chart-section {
+            margin-top: 1.5rem;
+            animation: slideDown 0.3s ease;
+        }
+
+        .chart-container {
+            height: 400px;
+            width: 100%;
+            position: relative;
+        }
+
+        /* Custom overlay legend */
+        #chart-legend {
+            position: absolute;
+            left: 1.5rem;
+            top: 1.5rem;
+            z-index: 1;
+            color: var(--muted-foreground);
+            pointer-events: none;
+        }
+
+        #legend-title {
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 12px;
+            margin-bottom: 0.25rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        #legend-value {
+            font-size: 28px;
+            font-weight: 600;
+            color: var(--foreground);
+        }
+
+        #legend-date {
+            font-size: 11px;
+            color: var(--muted-foreground);
+            margin-bottom: 0.75rem;
+        }
+
+        #explicit-legend {
+            font-size: 11px;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .legend-color-box {
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+        }
+
+        #spy-return {
+            font-size: 11px;
+            margin-top: 0.25rem;
+        }
+
+        /* Chart Controls */
+        .chart-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .chart-options {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .option-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 11px;
+            color: var(--muted-foreground);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .option-label input {
+            cursor: pointer;
+        }
+
+        .chart-title {
+            color: var(--primary);
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .chart-periods {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .period-button {
+            background: oklch(from var(--background) l c h / 0.8);
+            border: 1px solid var(--border);
+            color: var(--muted-foreground);
+            font-family: inherit;
+            font-size: 10px;
+            cursor: pointer;
+            padding: 0.3rem 0.6rem;
+            border-radius: calc(var(--radius) / 1.5);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            transition: all 0.15s ease;
+            backdrop-filter: blur(5px);
+        }
+
+        .period-button:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .period-button.active {
+            background: var(--primary);
+            color: var(--primary-foreground);
+            border-color: var(--primary);
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .stock-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <header class="header w-full py-2 relative z-10">
+        <div class="w-full max-w-6xl mx-auto px-4">
+            <nav class="flex justify-between items-center">
+                <div class="logo">
+                    <span></span>
+                </div>
+                <div class="last-updated" id="header-updated"></div>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <header class="mb-8">
+            <h1 class="header-title">ABHAY GLP-1 INDEX</h1>
+        </header>
+
+        <div class="section">
+            <div class="stats-bar">
+                <div>
+                    LAST UPDATED: <span id="last-updated-time">--:--</span>
+                </div>
+            </div>
+            
+            <div id="loading" class="loading active">
+                <div class="spinner"></div>
+                <span>Loading index data... (this may take a moment)</span>
+            </div>
+            
+            <div id="index-table" class="index-table" style="display: none;">
+                <table class="main-table">
+                    <thead>
+                        <tr>
+                            <th>INDEX NAME</th>
+                            <th>VALUE</th>
+                            <th>1D</th>
+                            <th>1W</th>
+                            <th>1M</th>
+                            <th>INCEPTION</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="index-row" onclick="toggleConstituents()">
+                            <td class="index-name">
+                                <span class="expand-icon">▶</span>
+                                <span>Abhay GLP-1 Index</span>
+                            </td>
+                            <td id="index-value" class="index-value">--</td>
+                            <td id="index-1d" class="return-cell">--</td>
+                            <td id="index-1w" class="return-cell">--</td>
+                            <td id="index-1m" class="return-cell">--</td>
+                            <td id="index-inception" class="return-cell">--</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <div id="constituents" class="constituents-section" style="display: none;">
+                    <table class="constituents-table">
+                        <thead>
+                            <tr>
+                                <th>TICKER</th>
+                                <th>COMPANY</th>
+                                <th>WEIGHT</th>
+                                <th>PRICE</th>
+                                <th class="sortable" onclick="sortTable('day_1_return')">1D <span id="sort-1d">⇅</span></th>
+                                <th class="sortable" onclick="sortTable('week_1_return')">1W <span id="sort-1w">⇅</span></th>
+                                <th class="sortable" onclick="sortTable('month_1_return')">1M <span id="sort-1m">⇅</span></th>
+                                <th>CONTRIBUTION</th>
+                            </tr>
+                        </thead>
+                        <tbody id="constituents-body">
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div id="chart" class="chart-section" style="display: none;">
+                    <div class="chart-container">
+                        <div id="chart-legend">
+                            <div id="legend-title">Abhay GLP-1 Index</div>
+                            <div id="legend-value">--</div>
+                            <div id="legend-date">--</div>
+                            <div id="explicit-legend"></div>
+                        </div>
+                        
+                        <canvas id="indexChart"></canvas>
+                    </div>
+                    <div class="chart-controls">
+                        <div class="chart-periods">
+                            <button class="period-button" data-period="1D">1D</button>
+                            <button class="period-button" data-period="1W">1W</button>
+                            <button class="period-button active" data-period="1M">1M</button>
+                            <button class="period-button" data-period="ITD">ITD</button>
+                        </div>
+                        <div class="chart-options">
+                            <label class="option-label">
+                                <input type="checkbox" id="show-spy">
+                                Compare vs SPY
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="footer">
+            <div></div>
+            <button class="theme-button" onclick="toggleTheme()">
+                [<span id="theme-text">DARK</span>]
+            </button>
+        </footer>
+    </main>
+
+    <script>
+        let indexData = null;
+        let refreshInterval;
+        let constituentsVisible = false;
+        let sortDirection = {};
+        let currentSort = null;
+        let chartInstance = null;
+        let currentChartPeriod = '1M';
+        let chartDataCache = {}; // Cache chart data to avoid repeated API calls
+        let showSpy = false;
+
+        const themes = [
+            'dark', 'light', 'hegemon', 'retroneon', 'oxide', 
+            'deeplearning', 'biolum', 'paladin', 'cobalt', 'alucard'
+        ];
+        
+        const themeNames = {
+            'light': 'LIGHT',
+            'dark': 'DARK', 
+            'hegemon': 'HEGEMON',
+            'retroneon': 'RETRONEON',
+            'oxide': 'OXIDE',
+            'deeplearning': 'DEEPLEARNING',
+            'biolum': 'BIOLUM',
+            'paladin': 'PALADIN',
+            'cobalt': 'COBALT',
+            'alucard': 'ALUCARD'
+        };
+
+        const chartColorMap = {
+            'light': { index: '#2563eb', spy: '#f97316', text: 'rgba(100, 116, 139, 0.7)' },
+            'dark': { index: '#60a5fa', spy: '#fb923c', text: 'rgba(156, 163, 175, 0.7)' },
+            'hegemon': { index: '#a78bfa', spy: '#facc15', text: 'rgba(161, 161, 170, 0.7)' },
+            'retroneon': { index: '#4ade80', spy: '#f472b6', text: 'rgba(161, 161, 170, 0.7)' },
+            'oxide': { index: '#f59e0b', spy: '#67e8f9', text: 'rgba(156, 163, 175, 0.7)' },
+            'deeplearning': { index: '#a78bfa', spy: '#f472b6', text: 'rgba(161, 161, 170, 0.7)' },
+            'biolum': { index: '#2dd4bf', spy: '#fde047', text: 'rgba(134, 239, 172, 0.7)' },
+            'paladin': { index: '#a3e635', spy: '#22d3ee', text: 'rgba(203, 213, 225, 0.7)' },
+            'cobalt': { index: '#60a5fa', spy: '#facc15', text: 'rgba(156, 163, 175, 0.7)' },
+            'alucard': { index: '#ef4444', spy: '#f59e0b', text: 'rgba(209, 213, 219, 0.7)' }
+        };
+
+        // Chart.js Functions
+        function getThemeColors() {
+            const style = getComputedStyle(document.documentElement);
+            return {
+                primary: style.getPropertyValue('--primary').trim(),
+                foreground: style.getPropertyValue('--foreground').trim(),
+                border: style.getPropertyValue('--border').trim(),
+                mutedForeground: style.getPropertyValue('--muted-foreground').trim(),
+                background: style.getPropertyValue('--background').trim()
+            };
+        }
+
+        function cssVarToRgba(cssVar, alpha = 1) {
+            // Create a temporary element to resolve CSS variables to actual colors
+            const tempEl = document.createElement('div');
+            tempEl.style.color = cssVar;
+            document.body.appendChild(tempEl);
+            
+            const computedColor = getComputedStyle(tempEl).color;
+            document.body.removeChild(tempEl);
+            
+            // Parse rgb/rgba values
+            const match = computedColor.match(/rgba?\(([^)]+)\)/);
+            if (match) {
+                const [r, g, b] = match[1].split(',').map(x => parseInt(x.trim()));
+                return alpha === 1 ? `rgb(${r}, ${g}, ${b})` : `rgba(${r}, ${g}, ${b}, ${alpha})`;
+            }
+            
+            // Fallback
+            return alpha === 1 ? computedColor : `rgba(99, 102, 241, ${alpha})`;
+        }
+
+        // Custom crosshair plugin for Chart.js
+        const crosshairPlugin = {
+            id: 'crosshair',
+            afterDraw: (chart, args, options) => {
+                if (chart.tooltip._active && chart.tooltip._active.length) {
+                    const activePoint = chart.tooltip._active[0];
+                    const ctx = chart.ctx;
+                    const x = activePoint.element.x;
+                    const topY = chart.scales.y.top;
+                    const bottomY = chart.scales.y.bottom;
+
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.moveTo(x, topY);
+                    ctx.lineTo(x, bottomY);
+                    ctx.lineWidth = 1;
+                    ctx.strokeStyle = cssVarToRgba(`var(--muted-foreground)`, 0.6);
+                    ctx.setLineDash([3, 3]);
+                    ctx.stroke();
+                    ctx.restore();
+                }
+            }
+        };
+
+        function updateLegend(chart, result) {
+            const legendValue = document.getElementById('legend-value');
+            const legendDate = document.getElementById('legend-date');
+            const explicitLegend = document.getElementById('explicit-legend');
+            const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+            const colors = chartColorMap[currentTheme];
+            
+            explicitLegend.innerHTML = '';
+
+            let dataPoint = null;
+            if (chart.tooltip?._active?.length) {
+                const activePoint = chart.tooltip._active[0];
+                dataPoint = chart.data.datasets[activePoint.datasetIndex].data[activePoint.index];
+            } else if (chart.data.datasets[0]?.data?.length) {
+                const mainDataset = chart.data.datasets[0].data;
+                dataPoint = mainDataset[mainDataset.length - 1];
+            }
+
+            if (dataPoint) {
+                let periodReturn = '--';
+                if (indexData) {
+                    switch(currentChartPeriod) {
+                        case '1D': periodReturn = indexData.day_return; break;
+                        case '1W': periodReturn = indexData.week_return; break;
+                        case '1M': periodReturn = indexData.month_return; break;
+                        case 'ITD': periodReturn = indexData.total_return; break;
+                        default: periodReturn = indexData.month_return;
+                    }
+                }
+                const returnText = periodReturn !== '--' ? ` (${periodReturn >= 0 ? '+' : ''}${periodReturn.toFixed(2)}%)` : '';
+                legendValue.textContent = `${dataPoint.y.toFixed(2)}${returnText}`;
+                legendDate.textContent = dataPoint.x.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+            } else {
+                legendValue.textContent = '--';
+                legendDate.textContent = '--';
+            }
+
+            const indexName = 'Abhay GLP-1 Index';
+            explicitLegend.innerHTML += `
+                <div class="legend-item">
+                    <div class="legend-color-box" style="background-color: ${colors.index};"></div>
+                    <span>${indexName}</span>
+                </div>
+            `;
+
+            if (showSpy && result.benchmark_data) {
+                let spyReturnText = '';
+                if (result.benchmark_period_return !== null) {
+                    const sign = result.benchmark_period_return >= 0 ? '+' : '';
+                    spyReturnText = ` (${sign}${result.benchmark_period_return.toFixed(2)}%)`;
+                }
+                explicitLegend.innerHTML += `
+                    <div class="legend-item">
+                        <div class="legend-color-box" style="background-color: ${colors.spy};"></div>
+                        <span>SPY ${spyReturnText}</span>
+                    </div>
+                `;
+            }
+        }
+
+        async function fetchChartData(period, benchmark = false) {
+            const cacheKey = `${period}-${benchmark}`;
+            if (chartDataCache[cacheKey]) {
+                console.log(`Using cached data for ${cacheKey}`);
+                return chartDataCache[cacheKey];
+            }
+
+            try {
+                let url = `/api/chart?period=${period}`;
+                if (benchmark) {
+                    url += '&benchmark=SPY';
+                }
+                console.log(`Fetching fresh data from ${url}`);
+                const response = await fetch(url);
+                const result = await response.json();
+                
+                if (result.error) {
+                    console.error('Chart data error:', result.error);
+                    return null;
+                }
+                
+                // Transform data for Chart.js time scale
+                result.data = result.data.map(point => ({ x: new Date(point.time), y: point.value }));
+                if (result.benchmark_data) {
+                    result.benchmark_data = result.benchmark_data.map(point => ({ x: new Date(point.time), y: point.value }));
+                }
+                
+                chartDataCache[cacheKey] = result;
+                return result;
+                
+            } catch (error) {
+                console.error('Error fetching chart data:', error);
+                return null;
+            }
+        }
+
+        async function createChart() {
+            const result = await fetchChartData(currentChartPeriod, showSpy);
+            
+            if (chartInstance) chartInstance.destroy();
+            if (!result || !result.data || result.data.length === 0) {
+                console.warn('No chart data available for period:', currentChartPeriod);
+                return;
+            }
+
+            const ctx = document.getElementById('indexChart').getContext('2d');
+            const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+            const colors = chartColorMap[currentTheme];
+
+            let datasets = [{
+                label: 'Index',
+                data: result.data,
+                borderColor: colors.index,
+                borderWidth: 2,
+                fill: false, // User wants a pure line chart
+                tension: 0.4,
+                pointRadius: 0,
+                pointHoverRadius: 0,
+            }];
+
+            if (showSpy && result.benchmark_data) {
+                datasets.push({
+                    label: 'SPY',
+                    data: result.benchmark_data,
+                    borderColor: colors.spy,
+                    borderWidth: 1.5,
+                    borderDash: [5, 5], // Dashed line for benchmark
+                    fill: false,
+                    pointRadius: 0,
+                    tension: 0.4,
+                });
+            }
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: { datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: { duration: 300 },
+                    interaction: { intersect: false, mode: 'index' },
+                    onHover: (event, chartElement, chart) => updateLegend(chart, result),
+                    plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: { unit: 'day', displayFormats: { day: 'MMM d' } },
+                            grid: { display: false }, // No vertical grid lines
+                            ticks: {
+                                color: colors.text,
+                                font: { size: 11, family: 'var(--font-geist-mono)' },
+                                maxTicksLimit: 5, padding: 15, autoSkip: true,
+                            },
+                            border: { display: false }
+                        },
+                        y: {
+                            position: 'right',
+                            grid: { display: false }, // No horizontal grid lines
+                            ticks: {
+                                color: colors.text,
+                                font: { size: 11, family: 'var(--font-geist-mono)' },
+                                padding: 10, maxTicksLimit: 5
+                            },
+                            border: { display: false }
+                        }
+                    }
+                },
+                plugins: [crosshairPlugin]
+            });
+            updateLegend(chartInstance, result);
+        }
+
+        async function loadChartPeriod(period) {
+            currentChartPeriod = period;
+            document.querySelectorAll('.period-button').forEach(btn => {
+                btn.classList.toggle('active', btn.getAttribute('data-period') === period);
+            });
+            await createChart();
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const themeText = document.getElementById('theme-text');
+            const currentTheme = html.getAttribute('data-theme') || 'dark';
+            
+            const currentIndex = themes.indexOf(currentTheme);
+            const nextIndex = (currentIndex + 1) % themes.length;
+            const nextTheme = themes[nextIndex];
+            
+            html.setAttribute('data-theme', nextTheme);
+            themeText.textContent = themeNames[nextTheme];
+            localStorage.setItem('theme', nextTheme);
+            
+            // Recreate chart with new theme colors
+            if (chartInstance) {
+                setTimeout(createChart, 150); // Small delay for CSS vars
+            }
+        }
+
+        function formatCurrency(value, currency) {
+            if (!value) return 'N/A';
+            
+            const symbols = {
+                'USD': '$',
+                'EUR': '€',
+                'GBP': '£',
+                'JPY': '¥',
+                'HKD': 'HK$',
+                'CNY': '¥',
+                'CHF': 'CHF',
+                'INR': '₹'
+            };
+            
+            const symbol = symbols[currency] || currency;
+            return `${symbol}${value.toLocaleString()}`;
+        }
+
+        function formatReturn(value) {
+            if (value === null || value === undefined) return '--';
+            const sign = value > 0 ? '+' : '';
+            return `${sign}${value.toFixed(2)}%`;
+        }
+
+        function getReturnClass(value) {
+            if (value > 0) return 'return-positive';
+            if (value < 0) return 'return-negative';
+            return 'return-neutral';
+        }
+
+        function toggleConstituents() {
+            const constituents = document.getElementById('constituents');
+            const chart = document.getElementById('chart');
+            const expandIcon = document.querySelector('.expand-icon');
+            
+            constituentsVisible = !constituentsVisible;
+            
+            if (constituentsVisible) {
+                constituents.style.display = 'block';
+                chart.style.display = 'block';
+                expandIcon.classList.add('expanded');
+                renderConstituents();
+                
+                // Initialize chart if not already created
+                if (!chartInstance) {
+                    setTimeout(() => createChart(), 300); // Wait for animation
+                }
+                
+                // Add event listeners to period buttons
+                document.querySelectorAll('.period-button').forEach(btn => {
+                    btn.addEventListener('click', () => loadChartPeriod(btn.dataset.period));
+                });
+
+                // Add listeners for new chart options
+                document.getElementById('show-spy').addEventListener('change', (e) => {
+                    showSpy = e.target.checked;
+                    // Clear cache for period when toggling benchmark
+                    const cacheKey = `${currentChartPeriod}-true`;
+                    delete chartDataCache[cacheKey];
+                    createChart();
+                });
+
+            } else {
+                constituents.style.display = 'none';
+                chart.style.display = 'none';
+                expandIcon.classList.remove('expanded');
+            }
+        }
+
+        function sortTable(field) {
+            if (!indexData || !indexData.components) return;
+            
+            // Toggle sort direction
+            if (currentSort === field) {
+                sortDirection[field] = !sortDirection[field];
+            } else {
+                sortDirection[field] = false; // Start with descending (highest first)
+                currentSort = field;
+            }
+            
+            // Update sort indicators
+            document.querySelectorAll('[id^="sort-"]').forEach(el => el.textContent = '⇅');
+            const indicator = document.getElementById(`sort-${field.replace('_', '')}`);
+            if (indicator) {
+                indicator.textContent = sortDirection[field] ? '↑' : '↓';
+            }
+            
+            // Sort the data
+            const sorted = [...indexData.components].sort((a, b) => {
+                const aVal = a[field] || 0;
+                const bVal = b[field] || 0;
+                return sortDirection[field] ? aVal - bVal : bVal - aVal;
+            });
+            
+            // Re-render with sorted data
+            const tbody = document.getElementById('constituents-body');
+            tbody.innerHTML = sorted.map(component => `
+                <tr>
+                    <td style="font-weight: 600;">${component.ticker}</td>
+                    <td style="font-size: 11px; color: var(--muted-foreground);">${component.company_name}</td>
+                    <td>${component.weight}%</td>
+                    <td>${formatCurrency(component.price, component.currency)}</td>
+                    <td class="${getReturnClass(component.day_1_return || 0)}">${formatReturn(component.day_1_return || 0)}</td>
+                    <td class="${getReturnClass(component.week_1_return || 0)}">${formatReturn(component.week_1_return || 0)}</td>
+                    <td class="${getReturnClass(component.month_1_return || 0)}">${formatReturn(component.month_1_return || 0)}</td>
+                    <td class="${getReturnClass(component.contribution)}">${formatReturn(component.contribution)}</td>
+                </tr>
+            `).join('');
+        }
+
+        function renderConstituents() {
+            if (!indexData || !indexData.components) return;
+            sortTable(currentSort || 'month_1_return'); // Default sort by 1M
+        }
+
+        function renderIndex(data) {
+            const loading = document.getElementById('loading');
+            const indexTable = document.getElementById('index-table');
+            
+            indexData = data;
+            
+            document.getElementById('index-value').textContent = data.current_value.toFixed(2);
+            
+            const dayCell = document.getElementById('index-1d');
+            const weekCell = document.getElementById('index-1w');
+            const monthCell = document.getElementById('index-1m');
+            
+            dayCell.textContent = formatReturn(data.day_return);
+            dayCell.className = `return-cell ${getReturnClass(data.day_return)}`;
+            
+            weekCell.textContent = formatReturn(data.week_return);
+            weekCell.className = `return-cell ${getReturnClass(data.week_return)}`;
+            
+            monthCell.textContent = formatReturn(data.month_return);
+            monthCell.className = `return-cell ${getReturnClass(data.month_return)}`;
+            
+            const inceptionCell = document.getElementById('index-inception');
+            inceptionCell.textContent = formatReturn(data.total_return);
+            inceptionCell.className = `return-cell ${getReturnClass(data.total_return)}`;
+            
+            if (constituentsVisible) {
+                renderConstituents();
+            }
+            
+            loading.style.display = 'none';
+            indexTable.style.display = 'block';
+        }
+
+        async function waitForData() {
+            const loadingElement = document.getElementById('loading');
+            const spinner = loadingElement.querySelector('span');
+            
+            while (true) {
+                try {
+                    const response = await fetch('/api/ready');
+                    const readyData = await response.json();
+                    
+                    if (readyData.ready) {
+                        spinner.textContent = `Loading complete! Found ${readyData.stock_count} stocks.`;
+                        await new Promise(resolve => setTimeout(resolve, 1000)); // Brief pause to show success
+                        break;
+                    } else {
+                        spinner.textContent = `Loading stock data... (${readyData.stock_count}/17 stocks loaded)`;
+                    }
+                    
+                    await new Promise(resolve => setTimeout(resolve, 1000)); // Check every second
+                } catch (error) {
+                    console.error('Error checking readiness:', error);
+                    await new Promise(resolve => setTimeout(resolve, 2000)); // Wait longer on error
+                }
+            }
+        }
+
+        async function fetchIndex(isInitial = false) {
+            try {
+                if (isInitial) {
+                    // Wait for data to be ready instead of fixed delay
+                    await waitForData();
+                }
+                
+                const response = await fetch('/api/index');
+                const data = await response.json();
+                
+                if (data.error && !data.ready) {
+                    // Data still not ready, wait a bit more
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    return fetchIndex(false); // Retry without initial flag
+                }
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                const now = new Date();
+                document.getElementById('last-updated-time').textContent = now.toLocaleTimeString();
+                
+                renderIndex(data);
+                
+                // Clear chart cache when new data arrives (not on initial load)
+                if (!isInitial) {
+                    chartDataCache = {};
+                    if (chartInstance && constituentsVisible) {
+                        createChart(); // Refresh chart with new data
+                    }
+                }
+                
+            } catch (error) {
+                console.error('Error fetching index:', error);
+                document.getElementById('loading').innerHTML = `
+                    <div style="color: #ef4444;">
+                        Error loading index data: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        function startAutoRefresh(isInitial = false) {
+            fetchIndex(isInitial);
+            refreshInterval = setInterval(fetchIndex, 300000); // 5 minutes
+
+        }
+
+        function stopAutoRefresh() {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+                refreshInterval = null;
+            }
+
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            const html = document.documentElement;
+            const themeText = document.getElementById('theme-text');
+            
+            html.setAttribute('data-theme', savedTheme);
+            themeText.textContent = themeNames[savedTheme] || 'DARK';
+            
+            startAutoRefresh(true);
+        });
+
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                stopAutoRefresh();
+            } else {
+                startAutoRefresh();
+            }
+        });
+    </script>
+</body>
+</html>
