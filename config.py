@@ -18,6 +18,9 @@ STOCK_TICKERS = [
     'ONESOURCE.BO'   # OneSource Specialty (Bombay)
 ]
 
+# Optional benchmarks for comparisons
+BENCHMARK_TICKERS = ['SPY', 'QQQ', 'ACWI', 'EEM', 'XLV', 'IBB']
+
 # Portfolio weights (must sum to 100)
 PORTFOLIO_WEIGHTS = {
     'LLY': 13,
